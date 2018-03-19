@@ -25,7 +25,7 @@ const mapInformerRequest = req => ({
     headers: {
         Authorization: config.api.auth,
         'x-forwarded-path': PROXY_PREFIX,
-        'x-forwarded-user': 'vlad'
+        'x-forwarded-user': 'user@myapplication'
     }
 });
 
