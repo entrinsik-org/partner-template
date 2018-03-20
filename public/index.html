@@ -37,28 +37,39 @@
     <link rel="stylesheet" href="/informer/styles/ui-styles.min.css">
 </head>
 <body ng-cloak class="informer" ng-app="partner" layout="column"
-      ng-init="opts = { chartType: 'bar', groupBy: 'ShipCountry', trendChartType: 'column', trendX: 'OrderDate', trendInterval: 'year' }">
+      ng-init="opts = { chartType: 'bar', groupBy: 'ShipCountry', trendChartType: 'column', trendX: 'OrderDate', trendInterval: 'year', stacking: null }">
 
 <dataset id="admin:northwind-orders" ng-model="northwindOrders"></dataset>
 
-<div ng-if="northwindOrders" inf-datasets="[ northwindOrders ]" flex layout="column" layout-padding>
-    <div layout="row">
+<div ng-if="northwindOrders" inf-datasets="[ northwindOrders ]" flex layout="column" layout-margin>
+    <div layout="row" flex="10">
 
         <inf-dataset-field-select flex="40" label="Split by field" ng-model="opts.splitBy"
                                   types="['keyword_text', 'keyword', 'boolean', 'integer']"
                                   fields="northwindOrders.fields"></inf-dataset-field-select>
+
+        <md-input-container flex="20">
+            <label>Stacking</label>
+            <md-select ng-model="opts.stacking">
+                <md-option ng-value="null">None</md-option>
+                <md-option ng-value="'normal'">Normal</md-option>
+                <md-option ng-value="'percent'">Percent</md-option>
+            </md-select>
+        </md-input-container>
     </div>
-    <div layout="row">
+    <div layout="row" flex="30">
         <div layout="column" flex="50">
-            <chart
-                    chart-type="{{ opts.chartType }}"
-                    stacking="normal"
-                    dataset="{{ northwindOrders.id }}"
-                    group-by="{{ opts.groupBy }}"
-                    split-by="{{ opts.splitBy }}"
-                    drillldown-enabled="true"
-                    drilldown-all-fields="true"
-            ></chart>
+            <div class="relative-container" layout flex >
+                <chart class="inf-visual stretch"
+                       chart-type="opts.chartType"
+                       stacking="opts.stacking"
+                       dataset="northwindOrders.id"
+                       group-by="opts.groupBy"
+                       split-by="opts.splitBy"
+                       drillldown-enabled="true"
+                       drilldown-all-fields="true"
+                ></chart>
+            </div>
             <div layout="row">
                 <md-input-container flex="20">
                     <label>Chart Type</label>
@@ -76,17 +87,19 @@
                                           fields="northwindOrders.fields"></inf-dataset-field-select>
             </div>
         </div>
-        <div layout="column" flex="50">
-            <trend
-                    chart-type="{{ opts.trendChartType }}"
-                    stacking="normal"
-                    dataset="{{ northwindOrders.id }}"
-                    x="{{ opts.trendX }}"
-                    split-by="{{ opts.splitBy }}"
-                    drillldown-enabled="true"
-                    drilldown-all-fields="true"
-                    interval="{{ opts.trendInterval }}"
-            ></trend>
+        <div layout="column" flex="50" layout>
+            <div class="relative-container" flex>
+                <trend class="inf-visual stretch"
+                       chart-type="opts.trendChartType"
+                       stacking="opts.stacking"
+                       dataset="northwindOrders.id"
+                       x="opts.trendX"
+                       split-by="opts.splitBy"
+                       drillldown-enabled="true"
+                       drilldown-all-fields="true"
+                       interval="opts.trendInterval"
+                ></trend>
+            </div>
             <div layout="row">
                 <md-input-container flex="20">
                     <label>Chart Type</label>
@@ -116,13 +129,15 @@
             </div>
         </div>
     </div>
-    <div class="component-wrapper" layout="column" flex>
-        <div component="{ pivot: { drilldownDataEnabled: true, rowFields: ['ShipCountry', 'ShipRegion'], columnFields: ['OrderDate:year'], dataset: northwindOrders.id }}"></div>
+    <div layout="row" flex="30">
+        <pivot flex dataset="northwindOrders.id" rows="'ShipCountry'" columns="'OrderDate:year'" ></pivot>
+        <summary-table flex group-columns="['ShipCountry', 'ShipCity']" group-columns="ShipCity'" dataset="northwindOrders.id"></summary-table>
     </div>
+    <dataset-table flex="30" groups="'ShipCountry'" fields="['ShipCountry', 'ShipCity', 'ShipRegion']" dataset="northwindOrders.id"></dataset-table>
 </div>
 
 <script>
-    __ngDependencies = [ "uiGmapgoogle-maps" ]
+    __ngDependencies = ["uiGmapgoogle-maps"]
 </script>
 
 <!-- JQuery -->
@@ -157,7 +172,7 @@
 
 
 <script language="javascript">
-    angular.module('partner', [ 'informer', 'ngMaterial' ])
+    angular.module('partner', ['informer', 'ngMaterial'])
         .config(function ($mdThemingProvider) {
             $mdThemingProvider.theme('default')
                 .primaryPalette('blue', { default: '600' })
@@ -171,11 +186,11 @@
                     attrs.$observe('id', function (id) {
                         return api.link('inf:dataset').get({ id: id })
                             .then(function (dataset) {
-                                ctrls[ 0 ].$setViewValue(dataset);
+                                ctrls[0].$setViewValue(dataset);
                             });
                     });
                 },
-                require: [ 'ngModel' ]
+                require: ['ngModel']
             };
         });
 
