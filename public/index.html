@@ -35,105 +35,88 @@
     <!-- ui-styles.min.css, priority: 0 -->
 
     <link rel="stylesheet" href="/informer/styles/ui-styles.min.css">
+
+    <style>
+        .text-padding-top {
+            padding-top: 25px;
+        }
+
+        .text-padding-left {
+            padding-left: 10px;
+        }
+
+        .text-padding-right {
+            padding-right: 10px;
+        }
+
+        .grid-container {
+            height: 800px;
+        }
+
+        .full-size {
+            height: 100%;
+            width: 100%;
+        }
+    </style>
 </head>
-<body ng-cloak class="informer" ng-app="partner" layout="column"
-      ng-init="opts = { chartType: 'bar', groupBy: 'ShipCountry', trendChartType: 'column', trendX: 'OrderDate', trendInterval: 'year', stacking: null }">
+<body ng-cloak class="informer" ng-app="partner" layout="column">
 
-<dataset id="admin:northwind-orders" ng-model="northwindOrders"></dataset>
+<div ng-controller="PartnerReportCtrl as ctrl" flex layout="column">
+    <md-content ng-if="ctrl.dataset">
 
-<div ng-if="northwindOrders" inf-datasets="[ northwindOrders ]" flex layout="column" layout-margin>
-    <div layout="row" flex="10">
-
-        <inf-dataset-field-select flex="40" label="Split by field" ng-model="opts.splitBy"
-                                  types="['keyword_text', 'keyword', 'boolean', 'integer']"
-                                  fields="northwindOrders.fields"></inf-dataset-field-select>
-
-        <md-input-container flex="20">
-            <label>Stacking</label>
-            <md-select ng-model="opts.stacking">
-                <md-option ng-value="null">None</md-option>
-                <md-option ng-value="'normal'">Normal</md-option>
-                <md-option ng-value="'percent'">Percent</md-option>
-            </md-select>
-        </md-input-container>
-    </div>
-    <div layout="row" flex="30">
-        <div layout="column" flex="50">
-            <div class="relative-container" layout flex >
-                <chart class="inf-visual stretch"
-                       chart-type="opts.chartType"
-                       stacking="opts.stacking"
-                       dataset="northwindOrders.id"
-                       group-by="opts.groupBy"
-                       split-by="opts.splitBy"
-                       drillldown-enabled="true"
-                       drilldown-all-fields="true"
-                ></chart>
-            </div>
-            <div layout="row">
-                <md-input-container flex="20">
-                    <label>Chart Type</label>
-                    <md-select ng-model="opts.chartType">
-                        <md-option ng-value="'bar'">Bar</md-option>
-                        <md-option ng-value="'column'">Column</md-option>
-                        <md-option ng-value="'line'">Line</md-option>
-                        <md-option ng-value="'area'">Area</md-option>
-                        <md-option ng-value="'spline'">Spline</md-option>
-                        <md-option ng-value="'pie'">Pie</md-option>
-                    </md-select>
-                </md-input-container>
-                <inf-dataset-field-select flex="40" label="Group by field" ng-model="opts.groupBy"
-                                          types="['keyword_text', 'keyword', 'boolean', 'integer']"
-                                          fields="northwindOrders.fields"></inf-dataset-field-select>
-            </div>
+        <div layout="row" class="side-padded">
+            <md-switch ng-model="ctrl.requireFilter" aria-label="Require filter?">
+                Require Filter
+            </md-switch>
+            <span flex></span>
+            <md-menu ng-if="(ctrl.requireFilter && ctrl.filter.bool.must.length) || !ctrl.requireFilter">
+                <md-button ng-click="$mdMenu.open($event)" class="md-raised">
+                    <md-icon>file_download</md-icon>
+                    Export
+                </md-button>
+                <md-menu-content width="5" class="md-dense">
+                    <md-menu-item ng-repeat="exporter in ctrl.exporters track by exporter.id">
+                        <md-button ng-click="ctrl.exportFile(exporter, $event)">
+                            <md-icon md-font-icon
+                                     class="{{ exporter.contentType | mimeType:'icon' }}"></md-icon>
+                            {{ ::exporter.contentType | mimeType:'label' }}
+                        </md-button>
+                    </md-menu-item>
+                </md-menu-content>
+            </md-menu>
         </div>
-        <div layout="column" flex="50" layout>
-            <div class="relative-container" flex>
-                <trend class="inf-visual stretch"
-                       chart-type="opts.trendChartType"
-                       stacking="opts.stacking"
-                       dataset="northwindOrders.id"
-                       x="opts.trendX"
-                       split-by="opts.splitBy"
-                       drillldown-enabled="true"
-                       drilldown-all-fields="true"
-                       interval="opts.trendInterval"
-                ></trend>
-            </div>
-            <div layout="row">
-                <md-input-container flex="20">
-                    <label>Chart Type</label>
-                    <md-select ng-model="opts.trendChartType">
-                        <md-option ng-value="'bar'">Bar</md-option>
-                        <md-option ng-value="'column'">Column</md-option>
-                        <md-option ng-value="'line'">Line</md-option>
-                        <md-option ng-value="'area'">Area</md-option>
-                        <md-option ng-value="'spline'">Spline</md-option>
-                        <md-option ng-value="'pie'">Pie</md-option>
-                    </md-select>
-                </md-input-container>
+
+        <div layout="column">
+
+            <div layout="row" class="side-padded">
+                <div class="text-padding-top text-padding-left text-padding-right">Order date on or after:</div>
                 <md-input-container>
-                    <label>Interval</label>
-                    <md-select ng-model="opts.trendInterval">
-                        <md-option ng-value="'year'">Year</md-option>
-                        <md-option ng-value="'quarter'">Quarter</md-option>
-                        <md-option ng-value="'month'">Month</md-option>
-                        <md-option ng-value="'day'">Day</md-option>
-                        <md-option ng-value="'monthOfYear'">Month of Year</md-option>
-                        <md-option ng-value="'dayOfWeek'">Day of Week</md-option>
-                    </md-select>
+                    <label>Select date</label>
+                    <md-datepicker ng-model="ctrl.chosenDate"></md-datepicker>
                 </md-input-container>
-                <inf-dataset-field-select flex="40" label="X Axis" ng-model="opts.trendX"
-                                          types="['date', 'date_tz']"
-                                          fields="northwindOrders.fields"></inf-dataset-field-select>
+
+                <div class="text-padding-top text-padding-left">OR</div>
+
+                <div class="text-padding-top text-padding-left text-padding-right">Country exactly matches:</div>
+                <md-input-container class="md-block">
+                    <label>Enter Country</label>
+                    <input ng-model="ctrl.chosenCountry">
+                </md-input-container>
+
             </div>
+
+            <md-content flex layout="column" class="inf-grid-frame grid-container"
+                        ng-if="(ctrl.requireFilter && ctrl.filter.bool.must.length) || !ctrl.requireFilter">
+                <inf-dataset-grid dataset="::ctrl.dataset" config="ctrl.config"
+                                  dataset-filter="ctrl.filter"
+                                  class="full-size"
+                                  limit-fields="ctrl.limitFields"></inf-dataset-grid>
+            </md-content>
+
         </div>
-    </div>
-    <div layout="row" flex="30">
-        <pivot flex dataset="northwindOrders.id" rows="'ShipCountry'" columns="'OrderDate:year'" ></pivot>
-        <summary-table flex group-columns="['ShipCountry', 'ShipCity']" group-columns="ShipCity'" dataset="northwindOrders.id"></summary-table>
-    </div>
-    <dataset-table flex="30" groups="'ShipCountry'" fields="['ShipCountry', 'ShipCity', 'ShipRegion']" dataset="northwindOrders.id"></dataset-table>
+
+    </md-content>
+
 </div>
 
 <script>
@@ -173,39 +156,134 @@
 
 <script language="javascript">
     angular.module('partner', ['informer', 'ngMaterial'])
-        .config(function ($mdThemingProvider) {
-            $mdThemingProvider.theme('default')
-                .primaryPalette('blue', { default: '600' })
-                .warnPalette('red', { default: '400' })
-                .accentPalette('green', { default: '500' });
-        })
-        .directive('dataset', function (api) {
-            return {
-                restrict: 'E',
-                link: function (scope, element, attrs, ctrls) {
-                    attrs.$observe('id', function (id) {
-                        return api.link('inf:dataset').get({ id: id })
-                            .then(function (dataset) {
-                                ctrls[0].$setViewValue(dataset);
+            .config(function ($mdThemingProvider) {
+                $mdThemingProvider.theme('default')
+                        .primaryPalette('blue', { default: '600' })
+                        .warnPalette('red', { default: '400' })
+                        .accentPalette('green', { default: '500' });
+            })
+            .controller('PartnerReportCtrl', function ($scope, api, datasetService) {
+                var self = this;
+
+                /**
+                 * This is an injectable service we created on the Informer side.
+                 * It has various functions, but we're using it for its export function,
+                 * 'showExportDialog' (see exportFile function below).
+                 */
+                this.datasetService = datasetService;
+
+                //dataset id to load
+                var id = 'admin:northwind-orders';
+
+                //whether a filter is required before displaying dataset data
+                this.requireFilter = false;
+
+                //initialize the filter object
+                this.filter = {
+                    bool: {
+                        must: []
+                    }
+                };
+
+                //the fields to display in the dataset grid (field aliases)
+                this.limitFields = ['OrderDate', 'ShipAddress', 'ShipRegion', 'ShipCountry', 'FirstName', 'LastName', 'ProductName'];
+
+                /**
+                 * Example of constructing a config object to use with inf-dataset-grid, to affect display (default sorts, default page size, etc.)
+                 */
+//                this.config =
+//                {
+//                    // formatting object keyed by field name - like position, hidden, pinned, css, alignment
+//                    columns: {},
+//                    // Sort object { firstName: 'asc' }
+//                    sortBy: [{ShipCountry: 'desc'}],
+//                    // Default page size
+//                    pageSize: 25,
+//                    // group by array of field names
+//                    groups: ['LastName'],
+//                    // aggregates array of field names (used if grouping)
+//                    aggregates: ['max:OrderDate'],
+//                    // Choose whether or not to show the subheader (field name)
+//                    showSubheaders: false,
+//                    // Show columns that have been hidden with a special greyed out background -- useful for query edit mode
+//                    displayHiddenFields: false,
+//                    //Show top-level aggregates when grid is ungrouped
+//                    showOverallAggregates: true
+//                };
+
+                    //load the dataset model (will load dataset metadata -- name, fields, settings, etc.)
+                api.link('inf:dataset').get({ id: id })
+                        .then(function (dataset) {
+                            self.dataset = dataset;
+                            //get an array of fields on the dataset
+                            self.fields = dataset.embedded('inf:field');
+                            //load the registered exporters in the system
+                            return api.link('inf:dataset-exporters').get({ id: dataset.id });
+                        })
+                        .then(function (exporters) {
+                            //example of filtering exporters -- in this example, we only want the option of the Excel and PDF exporters
+                            self.exporters = _.filter(exporters, function (exporter) {
+                                return exporter.id === 'xlsx' || exporter.id === 'pdf'
                             });
+                        })
+                        .catch(function (err) {
+                            self.$log.error(['dataset', 'export'], 'Unable to find Dataset exporters', err);
+                        });
+
+                //the function that gets called when a user clicks an export menu item
+                this.exportFile = function (output, $event) {
+                    /**
+                     * This function displays a dialog to the end user with various options, depending on the exporter
+                     * dataset - the dataset being exported
+                     * exporter - the exporter being used
+                     * settings - Settings to pass up with the export.  Mainly useful for sending up currently applied filters
+                     * (so that they can be applied to the exported data, if desired), as well as grid settings (i.e grouping and aggregates).
+                     * label - The default filename to be used
+                     * $event - The associated browser $event
+                     */
+                    self.datasetService.showExportDialog({
+                        dataset: this.dataset,
+                        exporter: output,
+                        settings: self.filter.bool.must.length ? {
+                            filter: self.filter,
+                            grid: self.config
+                        } : { grid: self.config },
+                        label: this.dataset.name,
+                        $event: $event
                     });
-                },
-                require: ['ngModel']
-            };
-        });
+                };
+
+                //if the chosen date a user selects changes, update the filter
+                $scope.$watch('ctrl.chosenDate', function (newVal, oldVal) {
+                    if (!newVal) self.filter.bool.must = [];
+                    if (newVal && !angular.equals(newVal, oldVal)) {
+                        self.chosenCountry = null;
+                        self.filter.bool.must = [{ range: { OrderDate: { gte: newVal } } }];
+                    }
+                });
+
+                //if the chosen country a user selects changes, update the filter
+                $scope.$watch('ctrl.chosenCountry', function (newVal, oldVal) {
+                    if (!newVal) self.filter.bool.must = [];
+                    if (newVal && !angular.equals(newVal, oldVal)) {
+                        self.chosenDate = null;
+                        self.filter.bool.must = [{ terms: { ShipCountry: [newVal] } }];
+                    }
+                });
+            });
 
     angular.module('informer')
-        .constant('embedded', true)
-        .constant('apiRoot', '/informer/api/')
-        .constant('version', '5.0.11')
-        .constant('build', '')
-        .constant('environment', 'production')
-        .constant('docRoot', '')
-        .constant('serverTimezone', 'America/New_York')
-        .constant('buildDate', new Date('2018-03-12T18:41:59.855Z'))
-        .run(function (licenseService) {
-            licenseService.setLicense({ enterprise: true });
-        });
+            .constant('embedded', true)
+            .constant('apiRoot', '/informer/api/')
+            .constant('version', '5.0.11')
+            .constant('build', '')
+            .constant('environment', 'production')
+            .constant('docRoot', '')
+            .constant('serverTimezone', 'America/New_York')
+            .constant('buildDate', new Date('2018-03-12T18:41:59.855Z'))
+            .run(function (licenseService) {
+                licenseService.setLicense({ enterprise: true });
+            });
 </script>
 
 </body>
