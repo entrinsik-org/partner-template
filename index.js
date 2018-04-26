@@ -20,14 +20,16 @@ const config = nconf.argv()
 
 const server = hapi.server({ port: config.port });
 
-const mapInformerRequest = req => ({
-    uri: `${config.api.root}/${req.params.p}${req.url.search}`,
-    headers: {
-        Authorization: config.api.auth,
-        'x-forwarded-path': PROXY_PREFIX,
-        'x-forwarded-user': 'user@myapplication'
+const mapInformerRequest = function (req) {
+    return {
+        uri: `${config.api.root}/${req.params.p}${req.url.search}`,
+        headers: {
+            Authorization: config.api.auth,
+            'x-forwarded-path': PROXY_PREFIX,
+            'x-forwarded-user': req.state.userId
+        }
     }
-});
+};
 
 const init = async () => {
     // plugin for serving static assets
@@ -35,6 +37,15 @@ const init = async () => {
 
     // plugin for proxy forwarding
     await server.register({ plugin: require('h2o2') });
+
+    server.state('userId', {
+        ttl: null,
+        isSecure: false,
+        isHttpOnly: true,
+        encoding: 'none',
+        clearInvalid: false,
+        strictHeader: true
+    });
 
     // static app assets
     server.route({
@@ -71,6 +82,15 @@ const init = async () => {
                 mapUri: mapInformerRequest,
                 ttl: 'upstream'
             }
+        }
+    });
+
+    server.route({
+        method: 'get',
+        path: '/',
+        handler: function (req, h) {
+            h.state('userId', req.query.user, { path: '/' } );
+            return h.file('./public/index.html');
         }
     });
 

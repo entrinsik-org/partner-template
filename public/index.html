@@ -62,56 +62,66 @@
 <body ng-cloak class="informer" ng-app="partner" layout="column">
 
 <div ng-controller="PartnerReportCtrl as ctrl" flex layout="column">
-    <md-content ng-if="ctrl.dataset">
+    <md-content ng-if="ctrl.dataset" inf-dataset="::ctrl.dataset">
 
         <div layout="row" class="side-padded">
-            <md-switch ng-model="ctrl.requireFilter" aria-label="Require filter?">
-                Require Filter
-            </md-switch>
+            <!--<md-switch ng-model="ctrl.requireFilter" aria-label="Require filter?">-->
+                <!--Require Filter-->
+            <!--</md-switch>-->
             <span flex></span>
-            <md-menu ng-if="(ctrl.requireFilter && ctrl.filter.bool.must.length) || !ctrl.requireFilter">
-                <md-button ng-click="$mdMenu.open($event)" class="md-raised">
-                    <md-icon>file_download</md-icon>
-                    Export
-                </md-button>
-                <md-menu-content width="5" class="md-dense">
-                    <md-menu-item ng-repeat="exporter in ctrl.exporters track by exporter.id">
-                        <md-button ng-click="ctrl.exportFile(exporter, $event)">
-                            <md-icon md-font-icon
-                                     class="{{ exporter.contentType | mimeType:'icon' }}"></md-icon>
-                            {{ ::exporter.contentType | mimeType:'label' }}
-                        </md-button>
-                    </md-menu-item>
-                </md-menu-content>
-            </md-menu>
+            <!--<md-menu ng-if="(ctrl.requireFilter && ctrl.filter.bool.must.length) || !ctrl.requireFilter">-->
+                <!--<md-button ng-click="$mdMenu.open($event)" class="md-raised">-->
+                    <!--<md-icon>file_download</md-icon>-->
+                    <!--Export-->
+                <!--</md-button>-->
+                <!--<md-menu-content width="5" class="md-dense">-->
+                    <!--<md-menu-item ng-repeat="exporter in ctrl.exporters track by exporter.id">-->
+                        <!--<md-button ng-click="ctrl.exportFile(exporter, $event)">-->
+                            <!--<md-icon md-font-icon-->
+                                     <!--class="{{ exporter.contentType | mimeType:'icon' }}"></md-icon>-->
+                            <!--{{ ::exporter.contentType | mimeType:'label' }}-->
+                        <!--</md-button>-->
+                    <!--</md-menu-item>-->
+                <!--</md-menu-content>-->
+            <!--</md-menu>-->
+            <inf-hide-show-filter ng-model="ctrl.showFilter"
+                                  has-filter="ctrl.settings.chips.length > 0"
+                                  ng-if="ctrl.dataset"></inf-hide-show-filter>
         </div>
 
         <div layout="column">
 
-            <div layout="row" class="side-padded">
-                <div class="text-padding-top text-padding-left text-padding-right">Order date on or after:</div>
-                <md-input-container>
-                    <label>Select date</label>
-                    <md-datepicker ng-model="ctrl.chosenDate"></md-datepicker>
-                </md-input-container>
+            <!--<div layout="row" class="side-padded">-->
+                <!--<div class="text-padding-top text-padding-left text-padding-right">Order date on or after:</div>-->
+                <!--<md-input-container>-->
+                    <!--<label>Select date</label>-->
+                    <!--<md-datepicker ng-model="ctrl.chosenDate"></md-datepicker>-->
+                <!--</md-input-container>-->
 
-                <div class="text-padding-top text-padding-left">OR</div>
+                <!--<div class="text-padding-top text-padding-left">OR</div>-->
 
-                <div class="text-padding-top text-padding-left text-padding-right">Country exactly matches:</div>
-                <md-input-container class="md-block">
-                    <label>Enter Country</label>
-                    <input ng-model="ctrl.chosenCountry">
-                </md-input-container>
+                <!--<div class="text-padding-top text-padding-left text-padding-right">Country exactly matches:</div>-->
+                <!--<md-input-container class="md-block">-->
+                    <!--<label>Enter Country</label>-->
+                    <!--<input ng-model="ctrl.chosenCountry">-->
+                <!--</md-input-container>-->
 
+            <!--</div>-->
+
+            <div inf-filters inf-filter-search ng-model="ctrl.settings.chips"
+                 query="ctrl.settings.filter" active-chip="ctrl.activeChip" junction="ctrl.settings.junction">
+            <div layout="column" flex inf-filter-chips-sidenav-open="filterSidenav">
+            <inf-dataset-filter-frame dataset="::ctrl.dataset" show-filter="ctrl.showFilter">
+                <md-content flex layout="column" class="inf-grid-frame grid-container"
+                            ng-if="(ctrl.requireFilter && ctrl.filter.bool.must.length) || !ctrl.requireFilter">
+                    <inf-dataset-grid dataset="::ctrl.dataset" config="ctrl.config"
+                                      dataset-filter="ctrl.settings.filter"
+                                      class="full-size"
+                                      limit-fields="ctrl.limitFields"></inf-dataset-grid>
+                </md-content>
+            </inf-dataset-filter-frame>
+                </div>
             </div>
-
-            <md-content flex layout="column" class="inf-grid-frame grid-container"
-                        ng-if="(ctrl.requireFilter && ctrl.filter.bool.must.length) || !ctrl.requireFilter">
-                <inf-dataset-grid dataset="::ctrl.dataset" config="ctrl.config"
-                                  dataset-filter="ctrl.filter"
-                                  class="full-size"
-                                  limit-fields="ctrl.limitFields"></inf-dataset-grid>
-            </md-content>
 
         </div>
 
@@ -184,6 +194,9 @@
                         must: []
                     }
                 };
+
+                this.showFilter = true;
+                this.settings = {};
 
                 //the fields to display in the dataset grid (field aliases)
                 this.limitFields = ['OrderDate', 'ShipAddress', 'ShipRegion', 'ShipCountry', 'FirstName', 'LastName', 'ProductName'];
