@@ -4,6 +4,9 @@ const nconf = require('nconf');
 const PROXY_PREFIX = '/informer';
 
 const hapi = require('hapi');
+const vision = require('vision');
+const swig = require('swig');
+const path = require('path');
 
 // parse app app config
 const config = nconf.argv()
@@ -20,14 +23,16 @@ const config = nconf.argv()
 
 const server = hapi.server({ port: config.port });
 
-const mapInformerRequest = req => ({
-    uri: `${config.api.root}/${req.params.p}${req.url.search}`,
-    headers: {
-        Authorization: config.api.auth,
-        'x-forwarded-path': PROXY_PREFIX,
-        'x-forwarded-user': 'user@myapplication'
+const mapInformerRequest = function (req) {
+    return {
+        uri: `${config.api.root}/${req.params.p}${req.url.search}`,
+        headers: {
+            Authorization: config.api.auth,
+            'x-forwarded-path': PROXY_PREFIX//,
+            //'x-forwarded-user': req.state.userId
+        }
     }
-});
+};
 
 const init = async () => {
     // plugin for serving static assets
@@ -35,6 +40,24 @@ const init = async () => {
 
     // plugin for proxy forwarding
     await server.register({ plugin: require('h2o2') });
+
+    server.state('userId', {
+        ttl: null,
+        isSecure: false,
+        isHttpOnly: true,
+        encoding: 'none',
+        clearInvalid: false,
+        strictHeader: true
+    });
+
+    server.events.on('start', () => {
+        server.views({
+            engines: {
+                html: { module: swig }
+            },
+            path: path.join(__dirname, 'views')
+        });
+    });
 
     // static app assets
     server.route({
@@ -74,6 +97,16 @@ const init = async () => {
         }
     });
 
+    server.route({
+        method: 'get',
+        path: '/',
+        handler: function (req, h) {
+            console.log(req.query.user);
+            return h.view('index', { user: req.query.user });
+        }
+    });
+
+    await server.register(vision);
     await server.start();
     console.log(`Server started at ${server.info.uri}`);
     console.log(`Forwarding requests to ${config.api.root}`);
