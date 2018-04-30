@@ -62,13 +62,15 @@
 <body ng-cloak class="informer" ng-app="partner" layout="column">
 
 <div ng-controller="PartnerReportCtrl as ctrl" flex layout="column">
-    <md-content ng-if="ctrl.dataset" inf-dataset="::ctrl.dataset">
 
-        <div layout="row" class="side-padded">
+    <!-- Dataset example -->
+    <!--<md-content ng-if="ctrl.dataset" inf-dataset="::ctrl.dataset">-->
+
+        <!--<div layout="row" class="side-padded">-->
             <!--<md-switch ng-model="ctrl.requireFilter" aria-label="Require filter?">-->
                 <!--Require Filter-->
             <!--</md-switch>-->
-            <span flex></span>
+            <!--<span flex></span>-->
             <!--<md-menu ng-if="(ctrl.requireFilter && ctrl.filter.bool.must.length) || !ctrl.requireFilter">-->
                 <!--<md-button ng-click="$mdMenu.open($event)" class="md-raised">-->
                     <!--<md-icon>file_download</md-icon>-->
@@ -84,12 +86,12 @@
                     <!--</md-menu-item>-->
                 <!--</md-menu-content>-->
             <!--</md-menu>-->
-            <inf-hide-show-filter ng-model="ctrl.showFilter"
-                                  has-filter="ctrl.settings.chips.length > 0"
-                                  ng-if="ctrl.dataset"></inf-hide-show-filter>
-        </div>
+            <!--<inf-hide-show-filter ng-model="ctrl.showFilter"-->
+                                  <!--has-filter="ctrl.settings.chips.length > 0"-->
+                                  <!--ng-if="ctrl.dataset"></inf-hide-show-filter>-->
+        <!--</div>-->
 
-        <div layout="column">
+        <!--<div layout="column">-->
 
             <!--<div layout="row" class="side-padded">-->
                 <!--<div class="text-padding-top text-padding-left text-padding-right">Order date on or after:</div>-->
@@ -108,18 +110,65 @@
 
             <!--</div>-->
 
-            <div inf-filters inf-filter-search ng-model="ctrl.settings.chips"
-                 query="ctrl.settings.filter" active-chip="ctrl.activeChip" junction="ctrl.settings.junction">
-            <div layout="column" flex inf-filter-chips-sidenav-open="filterSidenav">
-            <inf-dataset-filter-frame dataset="::ctrl.dataset" show-filter="ctrl.showFilter">
-                <md-content flex layout="column" class="inf-grid-frame grid-container"
-                            ng-if="(ctrl.requireFilter && ctrl.filter.bool.must.length) || !ctrl.requireFilter">
-                    <inf-dataset-grid dataset="::ctrl.dataset" config="ctrl.config"
-                                      dataset-filter="ctrl.settings.filter"
-                                      class="full-size"
-                                      limit-fields="ctrl.limitFields"></inf-dataset-grid>
-                </md-content>
-            </inf-dataset-filter-frame>
+            <!--<div inf-filters inf-filter-search ng-model="ctrl.settings.chips"-->
+                 <!--query="ctrl.settings.filter" active-chip="ctrl.activeChip" junction="ctrl.settings.junction">-->
+                <!--<div layout="column" flex inf-filter-chips-sidenav-open="filterSidenav">-->
+                    <!--<inf-dataset-filter-frame dataset="::ctrl.dataset" show-filter="ctrl.showFilter">-->
+                        <!--<md-content flex layout="column" class="inf-grid-frame grid-container"-->
+                                    <!--ng-if="(ctrl.requireFilter && ctrl.filter.bool.must.length) || !ctrl.requireFilter">-->
+                            <!--<inf-dataset-grid dataset="::ctrl.dataset" config="ctrl.config"-->
+                                              <!--dataset-filter="ctrl.settings.filter"-->
+                                              <!--class="full-size"-->
+                                              <!--limit-fields="ctrl.limitFields"></inf-dataset-grid>-->
+                        <!--</md-content>-->
+                    <!--</inf-dataset-filter-frame>-->
+                <!--</div>-->
+            <!--</div>-->
+
+        <!--</div>-->
+
+    <!--</md-content>-->
+
+    <!--Ad hoc report example-->
+
+    <md-content ng-if="ctrl.query">
+
+        <!-- Input parameters, if they exist -->
+        <form name="runForm" flex novalidate inf-top-state-color layout="column" ng-submit="ctrl.executeQuery()"
+              style="padding-bottom:8px;">
+        <div class="side-padded" ng-if="ctrl.keys.length">
+            <div class="padded" component="ctrl.query.inputs" ng-model="ctrl.params"></div>
+        </div>
+
+        <div layout="row" class="side-padded">
+            <!-- button to run query; will be enabled if the run form is valid (not required inputs are not defined
+                and the query isn't already running -->
+            <md-button type="submit" ng-disabled="runForm.$invalid || ctrl.isRunning" class="md-raised">
+                <md-icon>play_arrow</md-icon>
+                    Run Query
+            </md-button>
+            <!-- Indeterminate progress indicator, displays while query is running -->
+            <md-progress-circular md-diameter="25" style="margin-top:10px;"
+                                  ng-show="ctrl.isRunning"></md-progress-circular>
+        </div>
+            </form>
+
+        <div layout="column" class="top-padded">
+
+            <!-- Dataset grid to display query results -->
+            <div ng-if="ctrl.dataset" inf-dataset="ctrl.dataset">
+                <div inf-filters inf-filter-search ng-model="ctrl.settings.chips"
+                     query="ctrl.settings.filter" active-chip="ctrl.activeChip" junction="ctrl.settings.junction">
+                    <div layout="column" flex inf-filter-chips-sidenav-open="filterSidenav">
+                        <inf-dataset-filter-frame dataset="ctrl.dataset" show-filter="ctrl.showFilter">
+                            <md-content flex layout="column" class="inf-grid-frame grid-container">
+                                <inf-dataset-grid dataset="ctrl.dataset" config="ctrl.config"
+                                                  dataset-filter="ctrl.settings.filter"
+                                                  class="full-size"
+                                                  limit-fields="ctrl.limitFields"></inf-dataset-grid>
+                            </md-content>
+                        </inf-dataset-filter-frame>
+                    </div>
                 </div>
             </div>
 
@@ -172,117 +221,171 @@
                         .warnPalette('red', { default: '400' })
                         .accentPalette('green', { default: '500' });
             })
-            .controller('PartnerReportCtrl', function ($scope, api, datasetService) {
+            .controller('PartnerReportCtrl', function ($scope, api, $mdDialog, $q, $http) {
                 var self = this;
 
-                /**
-                 * This is an injectable service we created on the Informer side.
-                 * It has various functions, but we're using it for its export function,
-                 * 'showExportDialog' (see exportFile function below).
-                 */
-                this.datasetService = datasetService;
-
-                //dataset id to load
-                var id = 'admin:northwind-orders';
-
-                //whether a filter is required before displaying dataset data
-                this.requireFilter = false;
-
-                //initialize the filter object
-                this.filter = {
-                    bool: {
-                        must: []
-                    }
-                };
-
-                this.showFilter = true;
-                this.settings = {};
-
-                //the fields to display in the dataset grid (field aliases)
-                this.limitFields = ['OrderDate', 'ShipAddress', 'ShipRegion', 'ShipCountry', 'FirstName', 'LastName', 'ProductName'];
 
                 /**
-                 * Example of constructing a config object to use with inf-dataset-grid, to affect display (default sorts, default page size, etc.)
+                 * Dataset Example
                  */
-//                this.config =
-//                {
-//                    // formatting object keyed by field name - like position, hidden, pinned, css, alignment
-//                    columns: {},
-//                    // Sort object { firstName: 'asc' }
-//                    sortBy: [{ShipCountry: 'desc'}],
-//                    // Default page size
-//                    pageSize: 25,
-//                    // group by array of field names
-//                    groups: ['LastName'],
-//                    // aggregates array of field names (used if grouping)
-//                    aggregates: ['max:OrderDate'],
-//                    // Choose whether or not to show the subheader (field name)
-//                    showSubheaders: false,
-//                    // Show columns that have been hidden with a special greyed out background -- useful for query edit mode
-//                    displayHiddenFields: false,
-//                    //Show top-level aggregates when grid is ungrouped
-//                    showOverallAggregates: true
+//                /**
+//                 * This is an injectable service we created on the Informer side.
+//                 * It has various functions, but we're using it for its export function,
+//                 * 'showExportDialog' (see exportFile function below).
+//                 */
+//                this.datasetService = datasetService;
+//
+//                //dataset id to load
+//                var id = 'admin:northwind-orders';
+//
+//                //whether a filter is required before displaying dataset data
+//                this.requireFilter = false;
+//
+//                //initialize the filter object
+//                this.filter = {
+//                    bool: {
+//                        must: []
+//                    }
 //                };
+//
+//                this.showFilter = true;
+//                this.settings = {};
+//
+//                //the fields to display in the dataset grid (field aliases)
+//                this.limitFields = ['OrderDate', 'ShipAddress', 'ShipRegion', 'ShipCountry', 'FirstName', 'LastName', 'ProductName'];
+//
+//                /**
+//                 * Example of constructing a config object to use with inf-dataset-grid, to affect display (default sorts, default page size, etc.)
+//                 */
+////                this.config =
+////                {
+////                    // formatting object keyed by field name - like position, hidden, pinned, css, alignment
+////                    columns: {},
+////                    // Sort object { firstName: 'asc' }
+////                    sortBy: [{ShipCountry: 'desc'}],
+////                    // Default page size
+////                    pageSize: 25,
+////                    // group by array of field names
+////                    groups: ['LastName'],
+////                    // aggregates array of field names (used if grouping)
+////                    aggregates: ['max:OrderDate'],
+////                    // Choose whether or not to show the subheader (field name)
+////                    showSubheaders: false,
+////                    // Show columns that have been hidden with a special greyed out background -- useful for query edit mode
+////                    displayHiddenFields: false,
+////                    //Show top-level aggregates when grid is ungrouped
+////                    showOverallAggregates: true
+////                };
+//
+//                    //load the dataset model (will load dataset metadata -- name, fields, settings, etc.)
+//                api.link('inf:dataset').get({ id: id })
+//                        .then(function (dataset) {
+//                            self.dataset = dataset;
+//                            //get an array of fields on the dataset
+//                            self.fields = dataset.embedded('inf:field');
+//                            //load the registered exporters in the system
+//                            return api.link('inf:dataset-exporters').get({ id: dataset.id });
+//                        })
+//                        .then(function (exporters) {
+//                            //example of filtering exporters -- in this example, we only want the option of the Excel and PDF exporters
+//                            self.exporters = _.filter(exporters, function (exporter) {
+//                                return exporter.id === 'xlsx' || exporter.id === 'pdf'
+//                            });
+//                        })
+//                        .catch(function (err) {
+//                            self.$log.error(['dataset', 'export'], 'Unable to find Dataset exporters', err);
+//                        });
+//
+//                //the function that gets called when a user clicks an export menu item
+//                this.exportFile = function (output, $event) {
+//                    /**
+//                     * This function displays a dialog to the end user with various options, depending on the exporter
+//                     * dataset - the dataset being exported
+//                     * exporter - the exporter being used
+//                     * settings - Settings to pass up with the export.  Mainly useful for sending up currently applied filters
+//                     * (so that they can be applied to the exported data, if desired), as well as grid settings (i.e grouping and aggregates).
+//                     * label - The default filename to be used
+//                     * $event - The associated browser $event
+//                     */
+//                    self.datasetService.showExportDialog({
+//                        dataset: this.dataset,
+//                        exporter: output,
+//                        settings: self.filter.bool.must.length ? {
+//                            filter: self.filter,
+//                            grid: self.config
+//                        } : { grid: self.config },
+//                        label: this.dataset.name,
+//                        $event: $event
+//                    });
+//                };
+//
+//                //if the chosen date a user selects changes, update the filter
+//                $scope.$watch('ctrl.chosenDate', function (newVal, oldVal) {
+//                    if (!newVal) self.filter.bool.must = [];
+//                    if (newVal && !angular.equals(newVal, oldVal)) {
+//                        self.chosenCountry = null;
+//                        self.filter.bool.must = [{ range: { OrderDate: { gte: newVal } } }];
+//                    }
+//                });
+//
+//                //if the chosen country a user selects changes, update the filter
+//                $scope.$watch('ctrl.chosenCountry', function (newVal, oldVal) {
+//                    if (!newVal) self.filter.bool.must = [];
+//                    if (newVal && !angular.equals(newVal, oldVal)) {
+//                        self.chosenDate = null;
+//                        self.filter.bool.must = [{ terms: { ShipCountry: [newVal] } }];
+//                    }
+//                });
 
-                    //load the dataset model (will load dataset metadata -- name, fields, settings, etc.)
-                api.link('inf:dataset').get({ id: id })
-                        .then(function (dataset) {
-                            self.dataset = dataset;
-                            //get an array of fields on the dataset
-                            self.fields = dataset.embedded('inf:field');
-                            //load the registered exporters in the system
-                            return api.link('inf:dataset-exporters').get({ id: dataset.id });
-                        })
-                        .then(function (exporters) {
-                            //example of filtering exporters -- in this example, we only want the option of the Excel and PDF exporters
-                            self.exporters = _.filter(exporters, function (exporter) {
-                                return exporter.id === 'xlsx' || exporter.id === 'pdf'
-                            });
+
+                /**
+                 * Ad-hoc Report example
+                 *
+                 * This logic is designed to make the user re-run the query each time they hit this page.  Technically, we could
+                 * check if the query already has a dataset (the TTL for a query dataset is actually an hour) and load that up,
+                 * but with this approach, the user will have fresh data whenever they hit the page.
+                 */
+
+                self.isRunning = false;
+                self.id = 1164;
+                self.limitFields = ['id', 'active', 'lastName', 'userName', 'firstName', 'createdDate', 'displayName', 'emailAddress'];
+
+                //load the ad-hoc report we want to run
+                api.link('inf:query').get({ id: self.id })
+                        .then(function (query) {
+                            self.query = query;
+                            //get the inputs defined on the ad-hoc report
+                            self.keys = _.pluck(_.get(query, 'inputs.multiInput.inputs', {}), 'name');
                         })
                         .catch(function (err) {
-                            self.$log.error(['dataset', 'export'], 'Unable to find Dataset exporters', err);
+                            console.log(err);
                         });
 
-                //the function that gets called when a user clicks an export menu item
-                this.exportFile = function (output, $event) {
-                    /**
-                     * This function displays a dialog to the end user with various options, depending on the exporter
-                     * dataset - the dataset being exported
-                     * exporter - the exporter being used
-                     * settings - Settings to pass up with the export.  Mainly useful for sending up currently applied filters
-                     * (so that they can be applied to the exported data, if desired), as well as grid settings (i.e grouping and aggregates).
-                     * label - The default filename to be used
-                     * $event - The associated browser $event
-                     */
-                    self.datasetService.showExportDialog({
-                        dataset: this.dataset,
-                        exporter: output,
-                        settings: self.filter.bool.must.length ? {
-                            filter: self.filter,
-                            grid: self.config
-                        } : { grid: self.config },
-                        label: this.dataset.name,
-                        $event: $event
+                /*
+                Function called when clicking the 'Run Query' button
+                 */
+                this.executeQuery = function () {
+                    self.isRunning = true;
+                    var name = _.get(self.query, 'name');
+                    //get the params entered for the report inputs, and strip out invalid/unnecessary values
+                    var params = _.omit(self.params, function (value) {
+                        return value === undefined || value === null || value.length === 0;
                     });
+
+                    //POST to our query run route, passing up any report inputs
+                    $http.post('http://localhost:4000/informer/api/queries/'+self.id+'/_run', {params: params})
+                            .then(function () {
+                                //get the dataset created for this report run
+                                return $http.get('http://localhost:4000/informer/api/queries/'+self.id+'/dataset');
+                            })
+                            .then(function (response) {
+                                //get a handle on the looked-up dataset
+                                self.dataset = response.data;
+                            })
+                            .finally(function () {
+                                self.isRunning = false;
+                            });
                 };
-
-                //if the chosen date a user selects changes, update the filter
-                $scope.$watch('ctrl.chosenDate', function (newVal, oldVal) {
-                    if (!newVal) self.filter.bool.must = [];
-                    if (newVal && !angular.equals(newVal, oldVal)) {
-                        self.chosenCountry = null;
-                        self.filter.bool.must = [{ range: { OrderDate: { gte: newVal } } }];
-                    }
-                });
-
-                //if the chosen country a user selects changes, update the filter
-                $scope.$watch('ctrl.chosenCountry', function (newVal, oldVal) {
-                    if (!newVal) self.filter.bool.must = [];
-                    if (newVal && !angular.equals(newVal, oldVal)) {
-                        self.chosenDate = null;
-                        self.filter.bool.must = [{ terms: { ShipCountry: [newVal] } }];
-                    }
-                });
             });
 
     angular.module('informer')
