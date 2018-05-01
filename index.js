@@ -15,8 +15,7 @@ const config = nconf.argv()
     .defaults({
         port: 8080,
         api: {
-            root: 'http://localhost:3000',
-            auth: 'Basic YWRtaW46MTIz' // admin:123
+            root: 'http://localhost:3000'
         }
     })
     .get();
@@ -27,9 +26,7 @@ const mapInformerRequest = function (req) {
     return {
         uri: `${config.api.root}/${req.params.p}${req.url.search}`,
         headers: {
-            Authorization: config.api.auth,
-            'x-forwarded-path': PROXY_PREFIX//,
-            //'x-forwarded-user': req.state.userId
+            'x-forwarded-path': PROXY_PREFIX
         }
     }
 };
@@ -40,15 +37,6 @@ const init = async () => {
 
     // plugin for proxy forwarding
     await server.register({ plugin: require('h2o2') });
-
-    server.state('userId', {
-        ttl: null,
-        isSecure: false,
-        isHttpOnly: true,
-        encoding: 'none',
-        clearInvalid: false,
-        strictHeader: true
-    });
 
     server.events.on('start', () => {
         server.views({
@@ -101,7 +89,6 @@ const init = async () => {
         method: 'get',
         path: '/',
         handler: function (req, h) {
-            console.log(req.query.user);
             return h.view('index', { user: req.query.user });
         }
     });

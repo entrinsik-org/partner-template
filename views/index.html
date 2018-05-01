@@ -37,6 +37,10 @@
     <link rel="stylesheet" href="/informer/styles/ui-styles.min.css">
 
     <style>
+        .grid-container {
+            height: 800px;
+        }
+
         .full-size {
             height: 100%;
             width: 100%;
@@ -47,7 +51,49 @@
 
 <div ng-controller="PartnerReportCtrl as ctrl" flex layout="column">
 
-    {{ user }}
+    <md-content ng-if="ctrl.query">
+
+        <!-- Input parameters, if they exist -->
+        <form name="runForm" flex novalidate inf-top-state-color layout="column" ng-submit="ctrl.executeQuery()"
+              style="padding-bottom:8px;">
+            <div class="side-padded" ng-if="ctrl.keys.length">
+                <div class="padded" component="ctrl.query.inputs" ng-model="ctrl.params"></div>
+            </div>
+
+            <div layout="row" class="side-padded">
+                <!-- button to run query; will be enabled if the run form is valid (not required inputs are not defined
+                    and the query isn't already running -->
+                <md-button type="submit" ng-disabled="runForm.$invalid || ctrl.isRunning" class="md-raised">
+                    <md-icon>play_arrow</md-icon>
+                    Run Query
+                </md-button>
+                <!-- Indeterminate progress indicator, displays while query is running -->
+                <md-progress-circular md-diameter="25" style="margin-top:10px;"
+                                      ng-show="ctrl.isRunning"></md-progress-circular>
+            </div>
+        </form>
+
+        <div layout="column" class="top-padded">
+
+            <!-- Dataset grid to display query results -->
+            <div ng-if="ctrl.dataset" inf-dataset="ctrl.dataset">
+                <div inf-filters inf-filter-search ng-model="ctrl.settings.chips"
+                     query="ctrl.settings.filter" active-chip="ctrl.activeChip" junction="ctrl.settings.junction">
+                    <div layout="column" flex inf-filter-chips-sidenav-open="filterSidenav">
+                        <inf-dataset-filter-frame dataset="ctrl.dataset" show-filter="ctrl.showFilter">
+                            <md-content flex layout="column" class="inf-grid-frame grid-container">
+                                <inf-dataset-grid dataset="ctrl.dataset" config="ctrl.config"
+                                                  dataset-filter="ctrl.settings.filter"
+                                                  limit-fields="ctrl.limitFields" class="full-size"></inf-dataset-grid>
+                            </md-content>
+                        </inf-dataset-filter-frame>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </md-content>
 
     <script>
 
@@ -56,15 +102,16 @@
                 $httpProvider.interceptors.push(function () {
                     return {
                         'request': function (config) {
-                            //config.headers.Authorization = '{{ auth }}';
-                            config.headers['x-forwarded-user'] = '{{ user }}';
+                            //ideally this would be some kind of unique session id/user hash that can be decrypted in an Informer-side plugin
+                            //ABC can be replaced with whatever prefix token you'd like
+                            config.headers.Authorization = 'ABC {{user}}';
                             return config;
                         }
                     };
                 });
             }
 
-            {% endif % }
+            {% endif %}
     </script>
 </div>
 
@@ -111,8 +158,51 @@
                         .warnPalette('red', { default: '400' })
                         .accentPalette('green', { default: '500' });
             })
-            .controller('PartnerReportCtrl', function ($scope) {
+            .config(httpInterceptor)
+            .controller('PartnerReportCtrl', function ($scope, api, $http) {
                 var self = this;
+
+                self.isRunning = false;
+                self.id = 1426;
+                self.showFilter = true;
+                //self.limitFields = ['id', 'active', 'lastName', 'userName', 'firstName', 'createdDate', 'displayName', 'emailAddress'];
+                //load the ad-hoc report we want to run
+                api.link('inf:query').get({ id: self.id })
+                        .then(function (query) {
+                            self.query = query;
+                            //get the inputs defined on the ad-hoc report
+                            self.keys = _.pluck(_.get(query, 'inputs.multiInput.inputs', {}), 'name');
+                        })
+                        .catch(function (err) {
+                            console.log(err);
+                        });
+                /*
+                 Function called when clicking the 'Run Query' button
+                 */
+                this.executeQuery = function () {
+                    self.isRunning = true;
+                    var name = _.get(self.query, 'name');
+                    //get the params entered for the report inputs, and strip out invalid/unnecessary values
+                    var params = _.omit(self.params, function (value) {
+                        return value === undefined || value === null || value.length === 0;
+                    });
+                    //POST to our query run route, passing up any report inputs
+                    $http.post('http://localhost:4000/informer/api/queries/'+self.id+'/_run', {params: params})
+                            .then(function () {
+                                //get the dataset created for this report run
+                                return $http.get('http://localhost:4000/informer/api/queries/'+self.id+'/dataset');
+                            })
+                            .then(function (response) {
+                                //get a handle on the looked-up dataset
+                                return api.link('inf:dataset').get({id: response.data.id});
+                            })
+                            .then(function (dataset) {
+                                self.dataset = dataset;
+                            })
+                            .finally(function () {
+                                self.isRunning = false;
+                            });
+                };
             });
 
     angular.module('informer')
