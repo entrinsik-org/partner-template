@@ -36,6 +36,9 @@
 
     <link rel="stylesheet" href="/informer/styles/ui-styles.min.css">
 
+    <link rel="stylesheet" href="node_modules/chosen-js/chosen.min.css">
+    <link rel="image_src" href="node_modules/chosen-js/chosen-sprite.png">
+
     <style>
         .grid-container {
             height: 800px;
@@ -51,27 +54,45 @@
 
 <div ng-controller="PartnerReportCtrl as ctrl" flex layout="column">
 
+    <div style="width:300px;">
+    <select chosen multiple options="ctrl.countries"
+            ng-model="ctrl.filterParams.selectedCountries"
+            ng-options="country as country.label for country in ctrl.countries">
+    </select>
+    </div>
+
     <md-content ng-if="ctrl.query">
 
-        <!-- Input parameters, if they exist -->
-        <form name="runForm" flex novalidate inf-top-state-color layout="column" ng-submit="ctrl.executeQuery()"
-              style="padding-bottom:8px;">
-            <div class="side-padded" ng-if="ctrl.keys.length">
-                <div class="padded" component="ctrl.query.inputs" ng-model="ctrl.params"></div>
-            </div>
+        <!-- Input parameters, if they exist.  This will load up the Informer-created form for query inputs. -->
+        <!--<form name="runForm" flex novalidate inf-top-state-color layout="column" ng-submit="ctrl.executeQuery()"-->
+              <!--style="padding-bottom:8px;">-->
+            <!--<div class="side-padded" ng-if="ctrl.keys.length">-->
+                <!--<div class="padded" component="ctrl.query.inputs" ng-model="ctrl.params"></div>-->
+            <!--</div>-->
 
-            <div layout="row" class="side-padded">
-                <!-- button to run query; will be enabled if the run form is valid (not required inputs are not defined
-                    and the query isn't already running -->
-                <md-button type="submit" ng-disabled="runForm.$invalid || ctrl.isRunning" class="md-raised">
-                    <md-icon>play_arrow</md-icon>
+            <!--<div layout="row" class="side-padded">-->
+                <!--&lt;!&ndash; button to run query; will be enabled if the run form is valid (not required inputs are not defined-->
+                    <!--and the query isn't already running &ndash;&gt;-->
+                <!--<md-button type="submit" ng-disabled="runForm.$invalid || ctrl.isRunning" class="md-raised">-->
+                    <!--<md-icon>play_arrow</md-icon>-->
+                    <!--Run Query-->
+                <!--</md-button>-->
+                <!--&lt;!&ndash; Indeterminate progress indicator, displays while query is running &ndash;&gt;-->
+                <!--<md-progress-circular md-diameter="25" style="margin-top:10px;"-->
+                                      <!--ng-show="ctrl.isRunning"></md-progress-circular>-->
+            <!--</div>-->
+        <!--</form>-->
+        <div layout="row" class="side-padded">
+            <!-- If we wanted to wait for user input in a filter/parameter, and we're using our own filter inputs, we would add an expression to ng-disabled-->
+            <!-- i.e., ctrl.filterParams.selectedCountries.length > 0-->
+            <md-button ng-disabled="ctrl.isRunning" class="md-raised" ng-click="ctrl.executeQuery()">
+                <md-icon>play_arrow</md-icon>
                     Run Query
-                </md-button>
-                <!-- Indeterminate progress indicator, displays while query is running -->
-                <md-progress-circular md-diameter="25" style="margin-top:10px;"
-                                      ng-show="ctrl.isRunning"></md-progress-circular>
-            </div>
-        </form>
+            </md-button>
+            <!-- Indeterminate progress indicator, displays while query is running -->
+            <md-progress-circular md-diameter="25" style="margin-top:10px;"
+                ng-show="ctrl.isRunning"></md-progress-circular>
+        </div>
 
         <div layout="column" class="top-padded">
 
@@ -123,6 +144,7 @@
 
 <script type="text/javascript" src="/informer/jquery/jquery.min.js"></script>
 <script type="text/javascript" src="/informer/jquery/jquery-ui.min.js"></script>
+<script src="node_modules/chosen-js/chosen.jquery.js"></script>
 <script type="text/javascript" src="/informer/scripts/ui-libs-bower.min.js"></script>
 <script type="text/javascript" src="/informer/scripts/vendor-scripts.min.js"></script>
 <script type="text/javascript" src="/informer/scripts/user-scripts.min.js"></script>
@@ -148,10 +170,11 @@
 <script type="text/javascript" src="/informer/scripts/visuals-templates.min.js"></script>
 <script type="text/javascript" src="/informer/scripts/geocodio-scripts.min.js"></script>
 <script type="text/javascript" src="/informer/scripts/geocodio-templates.min.js"></script>
+<script src="lib/angular-chosen.js"></script>
 
 
 <script language="javascript">
-    angular.module('partner', ['informer', 'ngMaterial'])
+    angular.module('partner', ['informer', 'ngMaterial', 'angular.chosen'])
             .config(function ($mdThemingProvider) {
                 $mdThemingProvider.theme('default')
                         .primaryPalette('blue', { default: '600' })
@@ -162,6 +185,15 @@
             .controller('PartnerReportCtrl', function ($scope, api, $http) {
                 var self = this;
 
+                this.countries = [
+                    {label: 'USA', value: 'USA' },
+                    {label: 'Germany', value: 'Germany'},
+                    {label: 'Brazil', value: 'Brazil'},
+                    {label: 'Mexico', value: 'Mexico'}
+                ];
+
+                self.filterParams = { selectedCountries: [] };
+
                 self.isRunning = false;
                 self.id = 1426;
                 self.showFilter = true;
@@ -171,7 +203,7 @@
                         .then(function (query) {
                             self.query = query;
                             //get the inputs defined on the ad-hoc report
-                            self.keys = _.pluck(_.get(query, 'inputs.multiInput.inputs', {}), 'name');
+                            //self.keys = _.pluck(_.get(query, 'inputs.multiInput.inputs', {}), 'name');
                         })
                         .catch(function (err) {
                             console.log(err);
@@ -183,9 +215,13 @@
                     self.isRunning = true;
                     var name = _.get(self.query, 'name');
                     //get the params entered for the report inputs, and strip out invalid/unnecessary values
-                    var params = _.omit(self.params, function (value) {
-                        return value === undefined || value === null || value.length === 0;
-                    });
+//                    var params = _.omit(self.params, function (value) {
+//                        return value === undefined || value === null || value.length === 0;
+//                    });
+
+                    //if we aren't requiring a parameter/input be filled out, then we don't want to send up anything.  The params object should be an empty object in that case.
+                    //in the case of multiple parameters, we just wouldn't include those in the params object, but would include values for other fields we're filtering on.
+                    var params = self.filterParams.selectedCountries.length ? { ShipCountry: self.filterParams.selectedCountries } : {};
                     //POST to our query run route, passing up any report inputs
                     $http.post('http://localhost:4000/informer/api/queries/'+self.id+'/_run', {params: params})
                             .then(function () {

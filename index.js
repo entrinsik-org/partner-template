@@ -47,6 +47,26 @@ const init = async () => {
         });
     });
 
+    server.route({
+        method: 'get',
+        path: '/node_modules/{p*}',
+        handler: {
+            directory: {
+                path: 'node_modules'
+            }
+        }
+    });
+
+    server.route({
+        method: 'get',
+        path: '/lib/{p*}',
+        handler: {
+            directory: {
+                path: 'lib'
+            }
+        }
+    });
+
     // static app assets
     server.route({
         method: 'get',
